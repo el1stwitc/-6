@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FYA</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase для системы регистрации и базы данных -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    
+    <style>
+        /* --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ТЕМЫ --- */
+        :root {
+            /* Dark Mode (Default) */
+            --primary-grad: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --bg-color: #000000; 
+            --card-bg: #1c1c1e;  
+            --card-hover: #2c2c2e;
+            --input-bg: #2c2c2e;
+            --danger: #ff453a;
+            --success: #32d74b;
+            --gold: #ffd60a;
+            --info: #0a84ff;
+            --text-main: #ffffff;
+            --text-dim: #8e8e93;
+            --nav-bg: rgba(28, 28, 30, 0.9);
+            --modal-bg: #1c1c1e;
+            --ease-ios: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --ease-elastic: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        /* Светлая тема */
+        body.light-mode {
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --card-hover: #f0f0f5;
+            --input-bg: #e5e5ea;
+            --text-main: #000000;
+            --text-dim: #8e8e93;
+            --nav-bg: rgba(255, 255, 255, 0.9);
+            --modal-bg: #ffffff;
+        }
+
+        /* --- БАЗОВЫЙ СБРОС --- */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            margin: 0; 
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            background-color: var(--bg-color);
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+            user-select: none;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        #app-container {
+            width: 100%; 
+            max-width: 414px;
+            height: 100vh; 
+            background-color: var(--bg-color);
+            position: fixed; 
+            left: 50%;
+            transform: translateX(-50%);
+            top: 0;
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            transition: background-color 0.4s ease;
+        }
+
+        /* --- ШАПКА --- */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-width: 414px;
+            background: var(--primary-grad); 
+            color: #000;
+            padding: 45px 20px 15px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.5rem; 
+            font-weight: 900; 
+            z-index: 100;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 30px rgba(67, 233, 123, 0.15);
+            text-transform: uppercase;
+        }
+
+        .header-icon {
+            font-size: 1.2rem;
+            color: #000;
+            background: rgba(255,255,255,0.2);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .header-icon:active { transform: scale(0.9); }
+
+        /* --- ОСНОВНОЙ КОНТЕНТ --- */
+        main { 
+            flex: 1 1 auto; 
+            min-height: 0;
+            margin-top: 110px;
+            margin-bottom: 90px;
+            overflow-y: scroll; 
+            overflow-x: hidden;
+            padding: 20px; 
+            -webkit-overflow-scrolling: touch; 
+            position: relative;
+        }
+
+        /* --- АНИМАЦИИ ПЕРЕХОДОВ --- */
+        .tab-content { 
+            display: none; 
+            opacity: 0;
+            transform: scale(0.98) translateY(10px);
+            transition: all 0.4s var(--ease-ios);
+        }
+        
+        .tab-content.active { 
+            display: block; 
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            animation: tabEntrance 0.5s var(--ease-ios) forwards; 
+        }
+
+        @keyframes tabEntrance { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        /* --- НАВИГАЦИЯ (СКРОЛЛ) --- */
+        nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 90px;
+            background: var(--nav-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            border-top: 0.5px solid rgba(128,128,128,0.1);
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+            transition: background 0.4s ease;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        /* Скрыть скроллбар */
+        nav::-webkit-scrollbar { display: none; }
+
+        nav button {
+            background: none; 
+            border: none; 
+            color: var(--text-dim);
+            font-size: 0.6rem; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            cursor: pointer; 
+            flex-shrink: 0; /* Не сжимать кнопки */
+            min-width: 72px; /* Фикс ширина для таба */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        
+        nav button.active { 
+            color: #43e97b; 
+            transform: translateY(-2px);
+        }
+        
+        nav button i { 
+            font-size: 1.3rem; 
+            margin-bottom: 6px; 
+            transition: transform 0.3s var(--ease-elastic);
+        }
+        
+        nav button.active i {
+            transform: scale(1.2);
+        }
+
+        /* --- ФОРМЫ И ИНПУТЫ --- */
+        .form-section {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(128,128,128,0.05);
+            transition: background 0.4s ease;
+        }
+
+        .trade-section { 
+            background: rgba(128,128,128,0.08); 
+            padding: 15px; 
+            border-radius: 20px; 
+            margin-bottom: 20px; 
+            border: 1px solid rgba(128,128,128,0.1); 
+        }
+        
+        .section-title { 
+            font-size: 0.8rem; 
+            color: #43e97b; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            margin-bottom: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+
+        .form-group { margin-bottom: 18px; }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: var(--text-dim); 
+            font-size: 0.85rem; 
+            padding-left: 4px;
+        }
+        
+        input, select, textarea {
+            width: 100%; 
+            padding: 14px 16px; 
+            border: 1px solid rgba(128,128,128,0.1); 
+            border-radius: 16px; 
+            font-size: 1rem; 
+            background: var(--input-bg); 
+            color: var(--text-main);
+            transition: all 0.3s var(--ease-ios);
+        }
+
+        input:focus, select:focus {
+            border-color: #43e97b;
+            box-shadow: 0 0 15px rgba(67, 233, 123, 0.1);
+        }
+
+        /* --- КНОПКИ --- */
+        .btn-primary {
+            width: 100%; 
+            padding: 18px; 
+            background: var(--primary-grad);
+            color: #000; 
+            border: none; 
+            border-radius: 18px;
+            font-size: 1.1rem; 
+            font-weight: 800; 
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s var(--ease-ios);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(67, 233, 123, 0.2);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--card-hover);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-secondary:active { transform: scale(0.96); }
+
+        .btn-danger {
+            background: rgba(255, 69, 58, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(255, 69, 58, 0.3);
+            padding: 15px;
+            border-radius: 16px;
+            width: 100%;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn-danger:active { transform: scale(0.96); background: rgba(255, 69, 58, 0.25); }
+
+        .btn-reserve {
+            background: rgba(255, 214, 10, 0.15);
+            color: var(--gold);
+            border: 1px solid rgba(255, 214, 10, 0.3);
+            padding: 15px;
+            border-radius: 16px;
+            width: 100%;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn-reserve:active { transform: scale(0.96); background: rgba(255, 214, 10, 0.25); }
+
+        /* --- КАРТОЧКИ --- */
+        .card { 
+            background: var(--card-bg); 
+            padding: 16px; 
+            border-radius: 22px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            gap: 18px; 
+            border: 1px solid rgba(128,128,128,0.05); 
+            position: relative; 
+            transition: transform 0.3s var(--ease-ios), background 0.3s;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+
+        .card:active {
+            transform: scale(0.97);
+            background: var(--card-hover);
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            left: 0; top: 20%; bottom: 20%;
+            width: 5px;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .card.stock::after { background: var(--success); }
+        .card.reserve::after { background: #ffd60a; } /* Новое состояние бронь */
+        .card.sale::after { background: #0a84ff; } /* Новое состояние продажа */
+        .card.purchase::after { background: #43e97b; } /* Новое состояние покупка */
+        .card.sold::after { background: var(--text-dim); }
+        .card.deleted::after { background: var(--danger); } /* Новое состояние удален */
+
+        .card-img { 
+            width: 85px; 
+            height: 85px; 
+            border-radius: 18px; 
+            object-fit: cover; 
+            background: #2c2c2e;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-info h4 { margin: 0 0 5px 0; font-size: 1.05rem; color: var(--text-main); }
+        .card-price { color: #43e97b; font-weight: 900; font-size: 1.1rem; margin-top: 8px; }
+
+        /* --- ЧЕК-ЛИСТ --- */
+        #checklist-box { 
+            display: none; 
+            background: var(--card-hover); 
+            padding: 20px; 
+            border-radius: 20px; 
+            margin-bottom: 20px;
+            border: 1px solid rgba(67, 233, 123, 0.2);
+            animation: slideDown 0.4s var(--ease-ios);
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .check-item { 
+            background: var(--card-bg); 
+            padding: 14px; 
+            border-radius: 14px; 
+            text-align: center; 
+            font-size: 0.85rem; 
+            border: 1px solid transparent;
+            transition: 0.3s;
+            color: var(--text-main);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .check-item.good { 
+            background: rgba(50, 215, 75, 0.15); 
+            border-color: var(--success); 
+            color: var(--success); 
+            font-weight: bold;
+        }
+
+        /* --- МОДАЛЬНЫЕ ОКНА --- */
+        .modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            display: none; 
+            justify-content: center; align-items: flex-end; 
+            z-index: 2000; 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.active {
+            opacity: 1;
+        }
+        
+        .modal.center { align-items: center; } /* Для настроек по центру */
+
+        .modal-content { 
+            background: var(--modal-bg); 
+            width: 100%; 
+            border-radius: 35px 35px 0 0; 
+            padding: 30px 25px; 
+            max-height: 90vh; 
+            overflow-y: auto; 
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.1, 0.7, 0.1, 1), background 0.4s;
+            color: var(--text-main);
+        }
+
+        .modal.active .modal-content { transform: translateY(0); }
+        
+        /* Стиль для модалки настроек */
+        .settings-content {
+            background: var(--modal-bg);
+            width: 90%;
+            border-radius: 25px;
+            padding: 25px;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .modal.active .settings-content { transform: scale(1); opacity: 1; }
+
+        /* --- ПОЛНОЭКРАННОЕ ФОТО --- */
+        #fullscreen-viewer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 5000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+        #fullscreen-img {
+            max-width: 100%; max-height: 80vh;
+            object-fit: contain;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .fs-close {
+            position: absolute; top: 40px; right: 20px;
+            color: white; font-size: 2rem; cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* --- УВЕДОМЛЕНИЯ --- */
+        #toast-container {
+            position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+            z-index: 5000; width: 90%; display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .toast {
+            background: rgba(44, 44, 46, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 16px 20px; border-radius: 20px; color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 12px;
+            animation: toastIn 0.5s var(--ease-elastic) forwards;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-50px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* --- СТАТИСТИКА (СЕЙФ) --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(128,128,128,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+        }
+        .stat-val { font-size: 1.4rem; font-weight: 900; }
+        .stat-label { font-size: 0.85rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- ЭФФЕКТЫ --- */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
+        }
+
+        /* --- ДОБАВЛЕННЫЕ СТИЛИ ДЛЯ РЕГИСТРАЦИИ --- */
+        .auth-card {
+            background: #242424;
+            padding: 40px;
+            border-radius: 15px;
+            border: 1px solid #333;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        /* Фильтры и кнопки */
+        .filter-btn {
+            background: var(--card-hover);
+            color: var(--text-dim);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-grad);
+            color: #000;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(67, 233, 123, 0.2);
+            border-color: transparent;
+        }
+
+        .filter-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Enable vertical scroll on PCs */
+        @media (min-width: 768px) {
+            body {
+                overflow: hidden;
+            }
+            #app-container {
+                height: 100vh;
+                overflow: hidden;
+            }
+            main {
+                height: calc(100vh - 110px - 90px);
+                overflow-y: auto;
+            }
+        }
+
+        /* Enable vertical scroll on mobile */
+        @media (max-width: 767px) {
+            body {
+                overflow: hidden;
+            }
+            main {
+                height: calc(100vh - 110px - 90px);
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Слой авторизации (отображается по умолчанию) -->
+<div id="auth-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; z-index: 9999; display: flex; align-items: center; justify-content: center;">
+    <div class="auth-card">
+        <h2 style="color: #fff; margin-bottom: 20px;">FYA System</h2>
+        <div style="margin-bottom: 15px; text-align: left;">
+            <label style="color: #888; display: block; margin-bottom: 5px;">Email</label>
+            <input type="email" id="auth-email" style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 8px;">
+        </div>
+        <div style="margin-bottom: 20px; text-align: left;">
+            <label style="color: #888; display: block; margin-bottom: 5px;">Пароль</label>
+            <input type="password" id="auth-password" style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 8px;">
+        </div>
+        <button class="btn-primary" onclick="handleSignIn()" style="width: 100%; padding: 12px; cursor: pointer;">Войти</button>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+<div id="datalist-container"></div>
+
+<div id="fullscreen-viewer">
+    <div class="fs-close" onclick="closeFullscreen()">&times;</div>
+    <img id="fullscreen-img" src="">
+    <div style="color:white; margin-top:20px; font-size:0.9rem; opacity:0.7;">Нажмите в любом месте, чтобы закрыть</div>
+</div>
+
+<div id="settings-modal" class="modal center">
+    <div class="settings-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0; color: var(--text-main);">Настройки</h2>
+            <div onclick="closeSettings()" style="background:var(--card-hover); width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                <i class="fa-solid fa-times" style="color:var(--text-dim);"></i>
+            </div>
+        </div>
+        
+        <div style="background:var(--card-hover); padding:15px; border-radius:18px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:bold; margin-bottom:4px; color:var(--text-main);">Светлая тема</div>
+                <div style="font-size:0.8rem; color:var(--text-dim);">Переключить внешний вид</div>
+            </div>
+            <label class="switch" style="position:relative; display:inline-block; width:50px; height:28px;">
+                <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#3a3a3c; transition:.4s; border-radius:34px;"></span>
+                <span id="theme-slider" style="position:absolute; content:''; height:24px; width:24px; left:2px; bottom:2px; background-color:white; transition:.4s; border-radius:50%;"></span>
+            </label>
+            <style>
+                input:checked + span { background-color: #43e97b; }
+                input:checked + span + span { transform: translateX(22px); }
+            </style>
+        </div>
+        <div style="margin-top:20px; text-align:center; color:var(--text-dim); font-size:0.75rem;">
+            FYA System Ultimate v2.5<br>Developed for Resell
+        </div>
+    </div>
+</div>
+
+<div id="details-modal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div style="width: 40px; height: 5px; background: rgba(128,128,128,0.3); border-radius: 10px; margin: -10px auto 20px;"></div>
+        
+        <div id="m-gallery" style="display:flex; gap:12px; overflow-x:auto; margin-bottom:20px; padding-bottom: 10px;"></div>
+        
+        <h2 id="m-title" style="margin:0 0 15px 0; color:var(--text-main);"></h2>
+        <div id="m-details" style="color: var(--text-dim); line-height:1.6; font-size: 1rem;"></div>
+        
+        <div id="m-actions" style="margin-top:30px; display:flex; flex-direction:column; gap:12px;"></div>
+        
+        <button class="btn-secondary" style="margin-top:15px;" onclick="closeModal()">Закрыть</button>
+    </div>
+</div>
+
+<div id="app-container" style="display: none;">
+    <header id="app-header">
+        <span>FYA</span>
+        <div class="header-icon ripple-btn" onclick="openSettings()">
+            <i class="fa-solid fa-cog"></i>
+        </div>
+    </header>
+
+    <main id="main-scroll">
+        <div id="tab-add" class="tab-content active">
+            <div class="form-section">
+                <div class="form-group">
+                    <label>Тип устройства</label>
+                    <select id="add-type" onchange="renderAddForm()">
+                        <option value="phone">📱 Смартфон</option>
+                        <option value="headphones">🎧 Наушники</option>
+                        <option value="watch"> ⌚ Часы</option>
+                        <option value="other">📦 Другое</option>
+                    </select>
+                </div>
+
+                <button class="btn-secondary ripple-btn" onclick="toggleChecklist()" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <span><i class="fa-solid fa-list-check" style="margin-right:8px;"></i> Чек-лист проверки</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+
+                <div id="checklist-box">
+                    <div id="checklist-items" class="check-grid">
+                        </div>
+
+                    <div id="tech-checks" style="margin-top:15px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div id="screen-container">
+                                <label style="font-size:0.75rem;">Экран</label>
+                                <select id="check-screen" onchange="validateChecklist()">
+                                    <option value="">Выбрать...</option>
+                                    <option value="Идеал">💎 Идеал</option>
+                                    <option value="Царапины">🔍 Царапины</option>
+                                    <option value="Переклей">🔧 Переклей</option>
+                                    <option value="Разбит">❌ Разбит</option>
+                                </select>
+                            </div>
+                            <div id="body-container">
+                                <label style="font-size:0.75rem;">Корпус</label>
+                                <select id="check-body" onchange="validateChecklist()">
+                                    <option value="">Выбрать...</option>
+                                    <option value="Идеал">💎 Идеал</option>
+                                    <option value="Следы">🔍 Следы</option>
+                                    <option value="Сколы">⚠️ Сколы</option>
+                                    <option value="Убит">❌ Убит</option>
+                                </select>
+                            </div>
+                            <div id="akb-container">
+                                <label style="font-size:0.75rem;">АКБ</label>
+                                <input id="check-akb" type="number" onchange="validateChecklist()" placeholder="%" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="dynamic-form"></div>
+                
+                <div class="form-group">
+                    <label>Фото (до 5)</label>
+                    <input type="file" id="inp-photos" multiple accept="image/*" onchange="handlePhotos(this)" style="display:none;">
+                    <button class="btn-secondary ripple-btn" onclick="document.getElementById('inp-photos').click()">
+                        <i class="fa-solid fa-camera" style="margin-right:8px;"></i> Добавить фото
+                    </button>
+                    <div id="photo-preview-list" style="display:flex; gap:8px; margin-top:10px; overflow-x:auto; padding-bottom:5px;"></div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:18px;">
+                    <div>
+                        <label>Закуп</label>
+                        <input id="inp-buy" type="number" placeholder="₽" onchange="validateChecklist()">
+                    </div>
+                    <div>
+                        <label>Ремонт</label>
+                        <input id="inp-repair" type="number" placeholder="₽ (опционально)">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Заметки</label>
+                    <textarea id="inp-notes" rows="3" placeholder="Комментарии, дефекты..."></textarea>
+                </div>
+                
+                <button id="btn-add-main" class="btn-primary ripple-btn" onclick="addItem()" disabled>
+                    <i class="fa-solid fa-plus"></i> Добавить в базу
+                </button>
+            </div>
+        </div>
+        
+        <div id="tab-trade" class="tab-content">
+            <div class="form-section">
+                <h3 class="section-title"><i class="fa-solid fa-sync"></i> Трейд-ин</h3>
+                <label>Устройство клиента</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <input id="tr-brand" placeholder="Бренд">
+                    <input id="tr-model" placeholder="Модель">
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <input id="tr-memory" placeholder="Гб" type="number">
+                    <input id="tr-color" placeholder="Цвет">
+                </div>
+                <div class="form-group">
+                    <label>IMEI</label>
+                    <input id="tr-imei">
+                </div>
+                <div class="trade-section">
+                    <label>Выдаваемое устройство</label>
+                    <select id="trade-out-select"></select>
+                </div>
+                <div class="form-group">
+                    <label>Доплата клиента</label>
+                    <input id="tr-cash" type="number" placeholder="₽ (если есть)">
+                </div>
+                <div class="form-group">
+                    <label>Комментарий</label>
+                    <textarea id="tr-comment" rows="2" placeholder="Заметки по обмену..."></textarea>
+                </div>
+                <button class="btn-primary ripple-btn" onclick="completeTradeIn()">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Завершить обмен
+                </button>
+            </div>
+        </div>
+        
+        <div id="tab-sell" class="tab-content">
+            <div class="form-section">
+                <h3 class="section-title"><i class="fa-solid fa-shopping-cart"></i> Продажа</h3>
+                <label>Поиск товара</label>
+                <input id="sell-search" oninput="renderSellList()" placeholder="Модель / IMEI...">
+                <select id="sell-select" style="margin-top:10px;"></select>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>Цена продажи</label>
+                    <input id="sell-price" type="number" placeholder="₽">
+                </div>
+                <div class="form-group">
+                    <label>Гарантия (дней)</label>
+                    <select id="sell-warranty">
+                        <option value="14">14 дней</option>
+                        <option value="30">30 дней</option>
+                        <option value="60">60 дней</option>
+                        <option value="90">90 дней</option>
+                        
+                        
+                     </select>
+                </div>
+                <button class="btn-primary ripple-btn" onclick="completeSell()">
+                    <i class="fa-solid fa-check"></i> Продать
+                </button>
+            </div>
+        </div>
+        
+        <div id="tab-base" class="tab-content">
+            <div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
+                <button class="filter-btn active ripple-btn" onclick="filterBase('phone', this)"><i class="fa-solid fa-mobile"></i> Смартфоны</button>
+                <button class="filter-btn ripple-btn" onclick="filterBase('headphones', this)"><i class="fa-solid fa-headphones"></i> Наушники</button>
+                <button class="filter-btn ripple-btn" onclick="filterBase('watch', this)"><i class="fa-solid fa-watch"></i> Часы</button>
+                <button class="filter-btn ripple-btn" onclick="filterBase('other', this)"><i class="fa-solid fa-box"></i> Другое</button>
+            </div>
+            <div id="stock-list"></div>
+        </div>
+        
+        <div id="tab-sold" class="tab-content">
+            <div class="form-section">
+                <h3 class="section-title"><i class="fa-solid fa-archive"></i> Архив продаж</h3>
+                <div id="sold-list"></div>
+            </div>
+        </div>
+        
+        <div id="tab-safe" class="tab-content">
+            <div class="form-section">
+                <h3 class="section-title"><i class="fa-solid fa-chart-line"></i> Финансовая аналитика</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Расходы</span>
+                        <span id="st-expenses" class="stat-val">0 ₽</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Выручка</span>
+                        <span id="st-revenue" class="stat-val">0 ₽</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Прибыль</span>
+                        <span id="st-net-profit" class="stat-val">0 ₽</span>
+                    </div>
+                </div>
+                <canvas id="profitChart" height="200"></canvas>
+            </div>
+        </div>
+        
+        <div id="tab-logs" class="tab-content">
+            <div class="form-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 class="section-title"><i class="fa-solid fa-history"></i> Журнал операций</h3>
+                    <button class="btn-danger ripple-btn" onclick="askClearLogs()" style="width:auto; padding:10px 15px; font-size:0.85rem;"><i class="fa-solid fa-trash"></i> Очистить</button>
+                </div>
+                <div id="logs-list"></div>
+            </div>
+        </div>
+    </main>
+    
+    <nav>
+        <button class="active ripple-btn" onclick="switchTab('add', this)"><i class="fa-solid fa-plus"></i>Добавить</button>
+        <button class="ripple-btn" onclick="switchTab('trade', this)"><i class="fa-solid fa-sync"></i>Трейд</button>
+        <button class="ripple-btn" onclick="switchTab('sell', this)"><i class="fa-solid fa-shopping-cart"></i>Продажа</button>
+        <button class="ripple-btn" onclick="switchTab('base', this)"><i class="fa-solid fa-database"></i>База</button>
+        <button class="ripple-btn" onclick="switchTab('sold', this)"><i class="fa-solid fa-archive"></i>Архив</button>
+        <button class="ripple-btn" onclick="switchTab('safe', this)"><i class="fa-solid fa-chart-bar"></i>Сейф</button>
+        <button class="ripple-btn" onclick="switchTab('logs', this)"><i class="fa-solid fa-list"></i>Логи</button>
+    </nav>
+</div>
+
+<script>
+    // --- УТИЛИТЫ (SHOWTOAST ВВЕРХУ) ---
+    function showToast(msg, type='info') {
+        const box = document.createElement('div');
+        box.className = 'toast';
+        box.innerHTML = `<i class="fa-solid fa-${type==='success'?'check-circle':(type==='error'?'exclamation-triangle':'info-circle')}" style="color:${type==='success'?'#43e97b':(type==='error'?'#ff453a':'#0a84ff')}"></i> ${msg}`;
+        document.getElementById('toast-container').appendChild(box);
+        setTimeout(() => box.remove(), 3000);
+    }
+
+    // --- ИНИЦИАЛИЗАЦИЯ SUPABASE ---
+    const supabaseUrl = 'https://kvfxjtsmynvhttmjwmyw.supabase.co'; // Замените на ваш реальный URL
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2ZnhqdHNteW52aHR0bWp3bXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNTQ5MjAsImV4cCI6MjA4NTYzMDkyMH0.k2Ryixxadin4p88sf43_43b-UABaN2EsV3yyllB8ixs'; // Замените на ваш публичный anon key
+    const { createClient } = supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // --- ФУНКЦИЯ ВХОДА ---
+    async function handleSignIn() {
+        try {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            
+            if (!email || !password) {
+                showToast("Введите email и пароль", "error");
+                return;
+            }
+            
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+            
+            if (error) throw error;
+            
+            showToast("Успешный вход!", "success");
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
+            await loadData(); // Загружаем данные из Supabase после логина
+        } catch (err) {
+            console.error('Ошибка входа:', err);
+            showToast("Ошибка входа: " + (err.message || 'Неизвестная ошибка'), "error");
+        }
+    }
+
+    // --- ЗАГРУЗКА ДАННЫХ ИЗ SUPABASE ---
+    async function loadData() {
+        const { data: itemsData, error: itemsError } = await supabaseClient.from('items').select('*').order('id', { ascending: false });
+        if (itemsError) {
+            showToast("Ошибка загрузки товаров: " + itemsError.message, "error");
+        } else {
+            db = itemsData || [];
+            // Update any items with 'purchase' status to 'stock' for compatibility
+            const purchaseItems = db.filter(item => item.status === 'purchase');
+            if (purchaseItems.length > 0) {
+                for (const item of purchaseItems) {
+                    await supabaseClient.from('items').update({ status: 'stock' }).eq('id', item.id);
+                }
+                // Reload data after update
+                const { data: updatedData } = await supabaseClient.from('items').select('*').order('id', { ascending: false });
+                db = updatedData || [];
+            }
+        }
+
+        const { data: logsData, error: logsError } = await supabaseClient.from('logs').select('*').order('id', { ascending: false });
+        if (logsError) {
+            showToast("Ошибка загрузки логов: " + logsError.message, "error");
+        } else {
+            logs = logsData || [];
+        }
+
+        // Рефреш UI
+        renderAddForm();
+        renderBase('phone', document.querySelector('.filter-btn.active'));
+        updateDatalists();
+        renderTradeLists();
+        renderSellList();
+        renderSold();
+        updateStats();
+        renderLogs();
+    }
+
+    // --- ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ---
+    let db = [];
+    let logs = [];
+    let settings = JSON.parse(localStorage.getItem('fya_settings')) || {theme: 'dark'};
+    let tempPhotos = [];
+    let chartObj = null;
+
+    window.onload = () => {
+        applyTheme();
+        document.querySelectorAll('.ripple-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                let ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                let rect = btn.getBoundingClientRect();
+                ripple.style.left = `${e.clientX - rect.left}px`;
+                ripple.style.top = `${e.clientY - rect.top}px`;
+                btn.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+        // loadData() вызывается после логина
+    }
+
+    // --- ПЕРЕКЛЮЧЕНИЕ ТАБОВ ---
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Рефреш данных при переходе
+        if(tabId === 'trade') renderTradeLists();
+        if(tabId === 'sell') renderSellList();
+        if(tabId === 'base') renderBase('phone', document.querySelector('.filter-btn'));
+        if(tabId === 'sold') renderSold();
+        if(tabId === 'safe') updateStats();
+        if(tabId === 'logs') renderLogs();
+    }
+
+    // --- НАСТРОЙКИ И ТЕМА ---
+    function openSettings() {
+        const modal = document.getElementById('settings-modal');
+        modal.style.display = 'flex';
+        void modal.offsetWidth; 
+        modal.classList.add('active');
+    }
+
+    function closeSettings() {
+        const modal = document.getElementById('settings-modal');
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 400);
+    }
+
+    function toggleTheme() {
+        settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('fya_settings', JSON.stringify(settings));
+        applyTheme();
+    }
+
+    function applyTheme() {
+        if(settings.theme === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+        document.getElementById('theme-toggle').checked = (settings.theme === 'light');
+    }
+
+    // --- ЛОГИКА ВВОДА (ЧЕК-ЛИСТЫ) ---
+    function updateDatalists() {
+        const brands = ["Apple", "Samsung", "Xiaomi", "Google", "Sony", "Honor", "Realme"];
+        document.getElementById('datalist-container').innerHTML = `
+            <datalist id="brands-dl">${brands.map(b => `<option value="${b}">`).join('')}</datalist>
+            <datalist id="models-dl">
+                <option value="iPhone 11"><option value="iPhone 12"><option value="iPhone 13">
+                <option value="iPhone 14 Pro"><option value="iPhone 15 Pro Max">
+                <option value="AirPods Pro 2"><option value="Apple Watch S9">
+            </datalist>`;
+    }
+
+    function renderAddForm() {
+        const type = document.getElementById('add-type').value;
+        const container = document.getElementById('dynamic-form');
+        const listContainer = document.getElementById('checklist-items');
+        
+        // Поля ввода
+        let html = `<div class="form-group"><label>Бренд</label><input id="b-brand" list="brands-dl" placeholder="Apple..."></div>
+                    <div class="form-group"><label>Модель</label><input id="b-model" list="models-dl" placeholder="iPhone 13..."></div>
+                    <div style="display:flex; gap:10px;">
+                        <input id="b-color" placeholder="Цвет" style="flex:1">
+                        ${type==='phone' ? '<input id="b-memory" type="number" placeholder="Гб" style="flex:1">' : ''}
+                    </div>
+                    <div class="form-group" style="margin-top:10px;"><label>IMEI / SN</label><input id="b-imei"></div>`;
+        container.innerHTML = html;
+
+        // Генерация чек-листа
+        let checkItems = '';
+        const techSection = document.getElementById('tech-checks');
+        const screenBlock = document.getElementById('screen-container');
+        const akbBlock = document.getElementById('akb-container');
+        const bodyBlock = document.getElementById('body-container');
+
+        // Сброс видимости тех. блоков
+        techSection.style.display = 'block';
+        screenBlock.style.display = 'block';
+        akbBlock.style.display = 'block';
+        bodyBlock.style.display = 'block';
+        
+        // Обнуление значений
+        document.getElementById('check-screen').value = "";
+        document.getElementById('check-body').value = "";
+        document.getElementById('check-akb').value = "";
+
+        if (type === 'phone') {
+            checkItems = `
+                <div class="check-item" onclick="toggleCheck(this)">FaceID / TouchID</div>
+                <div class="check-item" onclick="toggleCheck(this)">TrueTone</div>
+                <div class="check-item" onclick="toggleCheck(this)">Камеры</div>
+                <div class="check-item" onclick="toggleCheck(this)">Связь / Wi-Fi</div>
+                <div class="check-item" onclick="toggleCheck(this)">Микро/Динамики</div>
+                <div class="check-item" onclick="toggleCheck(this)">Коробка</div>
+            `;
+        } else if (type === 'headphones') {
+            checkItems = `
+                <div class="check-item" onclick="toggleCheck(this)">Оригинал</div>
+                <div class="check-item" onclick="toggleCheck(this)">Звук L/R</div>
+                <div class="check-item" onclick="toggleCheck(this)">Микрофон</div>
+                <div class="check-item" onclick="toggleCheck(this)">Коробка</div>
+            `;
+            // Для наушников оставляем только корпус
+            screenBlock.style.display = 'none';
+            akbBlock.style.display = 'none';
+            document.getElementById('check-screen').value = "N/A";
+            document.getElementById('check-akb').value = "100";
+        } else if (type === 'watch') {
+            checkItems = `
+                <div class="check-item" onclick="toggleCheck(this)">Пара с тел.</div>
+                <div class="check-item" onclick="toggleCheck(this)">Кнопки/Crown</div>
+                <div class="check-item" onclick="toggleCheck(this)">Датчики</div>
+                <div class="check-item" onclick="toggleCheck(this)">Коробка</div>
+            `;
+        } else {
+            checkItems = `<div class="check-item" onclick="toggleCheck(this)">Работоспособность</div>`;
+            techSection.style.display = 'none'; // Скрываем всю тех часть
+            document.getElementById('check-screen').value = "N/A";
+            document.getElementById('check-body').value = "N/A";
+            document.getElementById('check-akb').value = "100";
+        }
+
+        listContainer.innerHTML = checkItems;
+        validateChecklist();
+    }
+
+    function toggleChecklist() {
+        const box = document.getElementById('checklist-box');
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function toggleCheck(el) {
+        el.classList.toggle('good');
+        validateChecklist();
+    }
+
+    function validateChecklist() {
+        const price = document.getElementById('inp-buy').value;
+        const brand = document.getElementById('b-brand').value;
+        const scr = document.getElementById('check-screen').value;
+        const body = document.getElementById('check-body').value;
+        const akb = document.getElementById('check-akb').value;
+
+        const isReady = (price && brand && scr && body && akb);
+        
+        const btn = document.getElementById('btn-add-main');
+        if(isReady) {
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.style.filter = "none";
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            btn.style.filter = "grayscale(1)";
+        }
+    }
+
+    // --- ФОТО И ДОБАВЛЕНИЕ ---
+    function handlePhotos(input) {
+        tempPhotos = [];
+        const preview = document.getElementById('photo-preview-list');
+        preview.innerHTML = '';
+        
+        Array.from(input.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                tempPhotos.push(e.target.result);
+                preview.innerHTML += `<img src="${e.target.result}" style="width:60px; height:60px; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,0.1);">`;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function addItem() {
+        const type = document.getElementById('add-type').value;
+        
+        // Сбор данных чеклиста
+        let checks = [];
+        document.querySelectorAll('.check-item.good').forEach(el => checks.push(el.innerText));
+
+        const newItem = {
+            date: new Date().toLocaleDateString(),
+            type: type,
+            brand: document.getElementById('b-brand').value,
+            model: document.getElementById('b-model').value,
+            color: document.getElementById('b-color').value,
+            memory: document.getElementById('b-memory') ? document.getElementById('b-memory').value : '',
+            imei: document.getElementById('b-imei').value,
+            buyPrice: Number(document.getElementById('inp-buy').value),
+            repairCost: Number(document.getElementById('inp-repair').value),
+            notes: document.getElementById('inp-notes').value,
+            photos: tempPhotos,
+            
+            // Состояние
+            screen: document.getElementById('check-screen').value,
+            body: document.getElementById('check-body').value,
+            akb: document.getElementById('check-akb').value,
+            checklist: checks,
+            
+            status: 'stock' // Доступен для продажи и обмена
+        };
+
+        const { data, error } = await supabaseClient.from('items').insert(newItem).select();
+        if (error) {
+            showToast("Ошибка добавления товара: " + error.message, "error");
+            return;
+        }
+
+        db.unshift(data[0]);
+        await addLog('in', `Добавлен: ${newItem.brand} ${newItem.model}`);
+
+        showToast("Товар добавлен!", "success");
+
+        // Reset form
+        document.getElementById('b-brand').value = '';
+        document.getElementById('b-model').value = '';
+        document.getElementById('b-color').value = '';
+        if(document.getElementById('b-memory')) document.getElementById('b-memory').value = '';
+        document.getElementById('b-imei').value = '';
+        document.getElementById('inp-buy').value = '';
+        document.getElementById('inp-repair').value = '';
+        document.getElementById('inp-notes').value = '';
+        tempPhotos = [];
+        document.getElementById('photo-preview-list').innerHTML = '';
+        document.getElementById('inp-photos').value = '';
+        document.querySelectorAll('.check-item').forEach(el => el.classList.remove('good'));
+        validateChecklist();
+
+        // Update UI
+        renderBase('phone', document.querySelector('.filter-btn.active'));
+        updateStats();
+    }
+
+    // --- ТРЕЙД-ИН (ЛОГИКА v2) ---
+    function renderTradeLists() {
+        const stock = db.filter(i => i.status === 'stock' || i.status === 'purchase');
+        document.getElementById('trade-out-select').innerHTML = stock.map(i =>
+            `<option value="${i.id}">${i.brand} ${i.model} (${i.buyPrice + i.repairCost}₽)</option>`
+        ).join('');
+    }
+
+    async function completeTradeIn() {
+        const outId = document.getElementById('trade-out-select').value;
+        const brand = document.getElementById('tr-brand').value;
+        const cash = parseFloat(document.getElementById('tr-cash').value || 0);
+        
+        if(!outId || !brand) return showToast("Заполните данные!", "error");
+        
+        const outItem = db.find(i => i.id == outId);
+        
+        // Создаем новый товар (клиента)
+        const inItem = {
+            type: 'phone', // По умолчанию телефон, можно доработать
+            brand: brand,
+            model: document.getElementById('tr-model').value,
+            memory: document.getElementById('tr-memory').value,
+            color: document.getElementById('tr-color').value,
+            imei: document.getElementById('tr-imei').value,
+            buyPrice: (outItem.buyPrice + outItem.repairCost) - cash, // Цена закупа = цена нашего - доплата
+            repairCost: 0, 
+            status: 'stock', 
+            photos: [], 
+            date: new Date().toLocaleDateString(),
+            notes: "Трейд-ин: " + document.getElementById('tr-comment').value,
+            akb: '?', screen: '?', body: '?', checklist: []
+        };
+
+        const { data: inData, error: inError } = await supabaseClient.from('items').insert(inItem).select();
+        if (inError) {
+            showToast("Ошибка добавления товара: " + inError.message, "error");
+            return;
+        }
+
+        // Помечаем наш товар проданным
+        const { error: outError } = await supabaseClient.from('items').update({
+            status: 'sold',
+            sellPrice: (outItem.buyPrice + outItem.repairCost),
+            sellDate: new Date().toLocaleDateString(),
+            warrantyDays: 0
+        }).eq('id', outId);
+        if (outError) {
+            showToast("Ошибка обновления товара: " + outError.message, "error");
+            return;
+        }
+
+        db = db.map(i => i.id == outId ? { ...i, status: 'sold', sellPrice: (outItem.buyPrice + outItem.repairCost), sellDate: new Date().toLocaleDateString(), warrantyDays: 0 } : i);
+        db.unshift(inData[0]);
+        await addLog('trade', `Обмен: ${outItem.model} -> ${inItem.model}`);
+        showToast("Обмен успешно проведен", "success");
+
+        // Reset trade form
+        document.getElementById('tr-brand').value = '';
+        document.getElementById('tr-model').value = '';
+        document.getElementById('tr-memory').value = '';
+        document.getElementById('tr-color').value = '';
+        document.getElementById('tr-imei').value = '';
+        document.getElementById('tr-cash').value = '';
+        document.getElementById('tr-comment').value = '';
+
+        // Update UI
+        renderTradeLists();
+        renderBase('phone', document.querySelector('.filter-btn.active'));
+        updateStats();
+    }
+
+    // --- ПРОДАЖА (ЛОГИКА v2) ---
+    function renderSellList() {
+        const s = document.getElementById('sell-search').value.toLowerCase();
+        const stock = db.filter(i => (i.status === 'stock' || i.status === 'purchase') && (i.model + i.imei).toLowerCase().includes(s));
+        document.getElementById('sell-select').innerHTML = stock.map(i => `<option value="${i.id}">${i.brand} ${i.model} (${i.imei})</option>`).join('');
+    }
+
+    async function completeSell() {
+        const id = document.getElementById('sell-select').value;
+        const price = parseFloat(document.getElementById('sell-price').value);
+        const wDays = document.getElementById('sell-warranty').value;
+        
+        if(!id || !price) return showToast("Укажите цену!", "error");
+        
+        const { error } = await supabaseClient.from('items').update({
+            status: 'sold',
+            sellPrice: price,
+            warrantyDays: wDays,
+            sellDate: new Date().toLocaleDateString()
+        }).eq('id', id);
+        if (error) {
+            showToast("Ошибка продажи: " + error.message, "error");
+            return;
+        }
+
+        db = db.map(i => i.id == id ? { ...i, status: 'sold', sellPrice: price, warrantyDays: wDays, sellDate: new Date().toLocaleDateString() } : i);
+        await addLog('out', `Продажа: ${db.find(i => i.id == id).model} за ${price}₽`);
+        showToast("Успешно продано!", "success");
+
+        // Reset sell form
+        document.getElementById('sell-select').value = '';
+        document.getElementById('sell-price').value = '';
+        document.getElementById('sell-warranty').value = '14';
+
+        // Update UI
+        renderSellList();
+        renderBase('phone', document.querySelector('.filter-btn.active'));
+        updateStats();
+    }
+
+    // --- СКЛАД И РЕНДЕР ---
+    function filterBase(cat, btn) {
+        document.querySelectorAll('#tab-base .filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderBase(cat);
+    }
+
+    function renderBase(filter = 'phone') {
+        const list = document.getElementById('stock-list');
+        list.innerHTML = '';
+        
+        let filtered = db.filter(item => item.type === filter);
+        
+        if(filtered.length === 0) {
+            list.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">Пусто</div>`;
+            return;
+        }
+
+        filtered.forEach(item => {
+            const thumb = item.photos[0] || '';
+            const techInfo = item.type === 'phone' ? `🔋${item.akb}%` : (item.type === 'headphones' ? '🎧' : '⌚');
+
+            const priceDisplay = item.status === 'sold'
+                ? `<span style="color:var(--text-dim)">Продан:</span> ${item.sellPrice} ₽`
+                : `${item.buyPrice} ₽`;
+
+            const reserveTag = item.status === 'reserve' ? '<div style="font-size:0.7rem; color:#ffd60a; font-weight:bold; margin-top:2px;">Забронирован</div>' : '';
+
+            const card = document.createElement('div');
+            card.className = `card ${item.status}`;
+            card.onclick = (e) => {
+                if (!e.target.classList.contains('delete-btn')) showDetails(item.id);
+            };
+            card.innerHTML = `
+                <img src="${thumb}" class="card-img" onerror="this.style.display='none'">
+                <div class="card-info" style="flex:1;">
+                    <h4>${item.brand} ${item.model}${reserveTag}</h4>
+                    <div style="font-size:0.85rem; color:var(--text-dim); margin-bottom:6px;">
+                        ${item.memory ? item.memory + 'Gb • ' : ''}${item.color}
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <span style="background:rgba(128,128,128,0.1); padding:2px 8px; border-radius:6px; font-size:0.75rem;">${techInfo}</span>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                            <div class="card-price" style="${item.status==='sold'?'color:var(--text-dim)':''}">${priceDisplay}</div>
+                            <button class="btn-danger delete-btn" onclick="deleteItem(${item.id})" style="padding:5px 10px; font-size:0.7rem; width:auto;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    // --- АРХИВ ПРОДАЖ (ОТДЕЛЬНЫЙ ТАБ) ---
+    function renderSold() {
+        const list = document.getElementById('sold-list');
+        list.innerHTML = '';
+        const soldItems = db.filter(i => i.status === 'sold');
+
+        soldItems.forEach(item => {
+            const profit = item.sellPrice - item.buyPrice - item.repairCost;
+            const sellDate = new Date(item.sellDate);
+            const warrantyEnd = new Date(sellDate);
+            warrantyEnd.setDate(sellDate.getDate() + (item.warrantyDays || 0));
+            const today = new Date();
+            const daysLeft = Math.ceil((warrantyEnd - today) / (1000 * 60 * 60 * 24));
+            const warrantyText = daysLeft > 0 ? `Гарантия: ${daysLeft} дн.` : 'Гарантия истекла';
+
+            const card = document.createElement('div');
+            card.className = 'card sold';
+            card.onclick = (e) => {
+                if (!e.target.classList.contains('delete-btn')) showDetails(item.id);
+            };
+            card.innerHTML = `
+                <div class="card-info" style="width:100%;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <h4>${item.brand} ${item.model}</h4>
+                            <div style="font-size:0.75rem; color:${daysLeft > 0 ? '#43e97b' : '#ff453a'}; margin-top:4px;">${warrantyText}</div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                            <div style="color:${profit>0?'#43e97b':'#ff453a'}; font-weight:bold;">${profit>0?'+':''}${profit} ₽</div>
+                            <button class="btn-danger delete-btn" onclick="deleteItem(${item.id})" style="padding:5px 10px; font-size:0.7rem; width:auto;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-dim); margin-top:5px;">
+                        Продано: ${item.sellPrice} ₽ • ${item.sellDate}
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    // --- ДЕТАЛИ ТОВАРА И ФУНКЦИИ ---
+    function showDetails(id) {
+        const item = db.find(i => i.id === id);
+        if(!item) return;
+
+        const gal = document.getElementById('m-gallery');
+        gal.innerHTML = item.photos.map(src => 
+            `<img src="${src}" onclick="openFullscreen('${src}')" style="width:100px; height:100px; border-radius:15px; object-fit:cover; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.2);">`
+        ).join('');
+
+        document.getElementById('m-title').innerText = `${item.brand} ${item.model}`;
+        
+        let checkListStr = item.checklist ? item.checklist.join(', ') : '-';
+
+        let info = `
+            <b>💰 Финансы:</b><br>
+            Закуп: ${item.buyPrice} ₽<br>
+            Ремонт: ${item.repairCost} ₽<br>
+            <br>
+            <b>🔍 Состояние:</b><br>
+            Корпус: ${item.body}<br>
+            ${item.screen && item.screen !== 'N/A' ? `Экран: ${item.screen}<br>` : ''}
+            ${item.akb && item.akb !== 'N/A' ? `АКБ: ${item.akb}%<br>` : ''}
+            <br>
+            <b>📋 Коробка/Проверки:</b><br>
+            ${checkListStr}<br>
+            <br>
+            <b>📝 Заметки:</b><br>
+            ${item.notes || '-'}<br>
+            <br>
+            <b>📊 Статус:</b> ${item.status}
+        `;
+        document.getElementById('m-details').innerHTML = info;
+
+        const actions = document.getElementById('m-actions');
+        actions.innerHTML = '';
+
+        if(item.status === 'stock' || item.status === 'purchase') {
+            actions.innerHTML = `
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button type="button" class="btn-reserve ripple-btn" data-action="reserve" data-id="${item.id}">
+                        <i class="fa-solid fa-bookmark"></i> Забронировать
+                    </button>
+                    <button type="button" class="btn-danger ripple-btn" data-action="delete" data-id="${item.id}">
+                        <i class="fa-solid fa-trash"></i> Удалить
+                    </button>
+                </div>
+            `;
+        } else if(item.status === 'reserve') {
+            actions.innerHTML = `
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button type="button" class="btn-primary ripple-btn" data-action="unreserve" data-id="${item.id}">
+                        <i class="fa-solid fa-bookmark"></i> Снять бронь
+                    </button>
+                    <button type="button" class="btn-danger ripple-btn" data-action="delete" data-id="${item.id}">
+                        <i class="fa-solid fa-trash"></i> Удалить
+                    </button>
+                </div>
+            `;
+        } else if(item.status === 'sold') {
+            actions.innerHTML = `
+                <button type="button" class="btn-primary ripple-btn" style="background:var(--gold); color:black;" data-action="restore" data-id="${item.id}">
+                    <i class="fa-solid fa-rotate-left"></i> Вернуть на склад
+                </button>
+                <div style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:5px;">
+                    Отменит продажу и вернет товар в активные
+                </div>
+            `;
+        }
+
+        // Add event listeners for the buttons
+        actions.querySelectorAll('button[data-action]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const action = this.getAttribute('data-action');
+                const id = this.getAttribute('data-id');
+                if(action === 'reserve') reserveItem(id);
+                else if(action === 'unreserve') unreserveItem(id);
+                else if(action === 'delete') deleteItem(id);
+                else if(action === 'restore') restoreItem(id);
+            });
+        });
+
+        const modal = document.getElementById('details-modal');
+        modal.style.display = 'flex';
+        void modal.offsetWidth; 
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('details-modal');
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 400);
+    }
+
+    // --- ПОЛНОЭКРАННОЕ ФОТО ---
+    function openFullscreen(src) {
+        document.getElementById('fullscreen-img').src = src;
+        const viewer = document.getElementById('fullscreen-viewer');
+        viewer.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeFullscreen() {
+        const viewer = document.getElementById('fullscreen-viewer');
+        viewer.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    document.getElementById('fullscreen-viewer').onclick = (e) => {
+        if(e.target.id === 'fullscreen-viewer' || e.target.id === 'fullscreen-img') closeFullscreen();
+    };
+
+    // --- ОПЕРАЦИИ ---
+    async function restoreItem(id) {
+        if(!confirm("Вернуть этот товар на склад? Прибыль будет пересчитана.")) return;
+        const item = db.find(i => i.id === id);
+        const { error } = await supabaseClient.from('items').update({ status: 'stock', sellPrice: null, sellDate: null }).eq('id', id);
+        if (error) {
+            showToast("Ошибка восстановления: " + error.message, "error");
+            return;
+        }
+        db = db.map(i => i.id === id ? { ...i, status: 'stock', sellPrice: null, sellDate: null } : i);
+        await addLog('info', `Возврат на склад: ${item.brand} ${item.model}`);
+        showToast("Товар возвращен!", "info");
+        closeModal();
+        if(document.getElementById('tab-sold').classList.contains('active')) renderSold();
+    }
+
+    async function deleteItem(id) {
+        if(confirm("Удалить навсегда?")) {
+            const { error } = await supabaseClient.from('items').update({ status: 'deleted' }).eq('id', id); // Устанавливаем статус deleted вместо удаления
+            if (error) {
+                showToast("Ошибка удаления: " + error.message, "error");
+                return;
+            }
+            db = db.map(i => i.id === id ? { ...i, status: 'deleted' } : i);
+            closeModal();
+            renderBase('phone', document.querySelector('.filter-btn'));
+            showToast("Удалено", "danger");
+        }
+    }
+
+    async function reserveItem(id) {
+        const { error } = await supabaseClient.from('items').update({ status: 'reserve' }).eq('id', id);
+        if (error) {
+            showToast("Ошибка бронирования: " + error.message, "error");
+            return;
+        }
+        db = db.map(i => i.id === id ? { ...i, status: 'reserve' } : i);
+        const item = db.find(i => i.id === id);
+        await addLog('info', `Забронирован: ${item.brand} ${item.model}`);
+        showToast("Товар забронирован!", "success");
+        closeModal();
+        renderBase('phone', document.querySelector('.filter-btn'));
+    }
+
+    async function unreserveItem(id) {
+        const { error } = await supabaseClient.from('items').update({ status: 'stock' }).eq('id', id);
+        if (error) {
+            showToast("Ошибка снятия брони: " + error.message, "error");
+            return;
+        }
+        db = db.map(i => i.id === id ? { ...i, status: 'stock' } : i);
+        const item = db.find(i => i.id === id);
+        await addLog('info', `Бронь снята: ${item.brand} ${item.model}`);
+        showToast("Бронь снята!", "info");
+        closeModal();
+        renderBase('phone', document.querySelector('.filter-btn'));
+    }
+
+    // --- ЛОГИ И СТАТИСТИКА ---
+    async function addLog(type, msg) {
+        const newLog = {
+            date: new Date().toLocaleString(),
+            type: type,
+            msg: msg
+        };
+        const { data, error } = await supabaseClient.from('logs').insert(newLog).select();
+        if (error) {
+            showToast("Ошибка добавления лога: " + error.message, "error");
+            return;
+        }
+        logs.unshift(data[0]);
+    }
+
+    function renderLogs() {
+        const list = document.getElementById('logs-list');
+        list.innerHTML = logs.map(l => `
+            <div style="margin-bottom:10px; padding:10px; background:var(--card-bg); border-radius:12px; border-left: 3px solid ${l.type==='in'?'#43e97b':(l.type==='out'?'#ffd60a':(l.type==='trade'?'#ff9f0a':'#0a84ff'))}; font-size:0.85rem;">
+                <div style="color:var(--text-dim); font-size:0.7rem;">${l.date}</div>
+                <div style="margin-top:2px;">${l.msg}</div>
+            </div>
+        `).join('');
+    }
+
+    async function askClearLogs() {
+        if(confirm("Вы точно хотите очистить историю действий?")) {
+            if(confirm("Это действие необратимо. Удалить ВСЕ логи?")) {
+                const { error } = await supabaseClient.from('logs').delete().gt('id', 0);
+                if (error) {
+                    showToast("Ошибка очистки логов: " + error.message, "error");
+                    return;
+                }
+                logs = [];
+                renderLogs();
+                showToast("История очищена", "success");
+            }
+        }
+    }
+
+    function updateStats() {
+        let expenses = 0; 
+        let revenue = 0; 
+        let netProfit = 0; 
+
+        db.forEach(item => {
+            expenses += (item.buyPrice || 0) + (item.repairCost || 0);
+            if(item.status === 'sold') {
+                revenue += (item.sellPrice || 0);
+            }
+        });
+
+        netProfit = revenue - expenses;
+
+        document.getElementById('st-expenses').innerText = expenses.toLocaleString() + ' ₽';
+        document.getElementById('st-revenue').innerText = revenue.toLocaleString() + ' ₽';
+        document.getElementById('st-net-profit').innerText = netProfit.toLocaleString() + ' ₽';
+        document.getElementById('st-net-profit').style.color = netProfit >= 0 ? '#43e97b' : '#ff453a';
+
+        updateChart();
+    }
+
+    function updateChart() {
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        const sold = db.filter(i => i.status === 'sold').reverse();
+        const labels = sold.map(i => i.model.substring(0,10)); 
+        const data = sold.map(i => i.sellPrice - i.buyPrice - i.repairCost);
+
+        if(chartObj) chartObj.destroy();
+
+        chartObj = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels.slice(-10),
+                datasets: [{
+                    label: 'Прибыль (₽)',
+                    data: data.slice(-10),
+                    borderColor: '#43e97b',
+                    backgroundColor: 'rgba(67, 233, 123, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: 'rgba(128,128,128,0.1)' } }
+                }
+            }
+        });
+    }
+
+
+</script>
+</body>
+</html>
